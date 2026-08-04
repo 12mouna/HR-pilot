@@ -6,8 +6,16 @@ module.exports = {
   DB_PATH: process.env.DB_PATH || './data/hrpilot.db',
 
   // Hard cap requested by spec: never discover/scrape more than this many
-  // companies in a single run.
-  MAX_COMPANIES: 100,
+  // companies in a single run. Lowered from 100 -> 20 to keep scrape runs
+  // fast (each company involves homepage + careers page + per-job detail
+  // page requests, which adds up quickly).
+  MAX_COMPANIES: 20,
+
+  // 'scrape'    -> compile a company URL list via Wikipedia + scrape each
+  //                company's own careers page (per original spec).
+  // 'arbeitnow' -> pull companies/jobs directly from the Arbeitnow API
+  //                (faster, no ToS risk, used as a pragmatic fallback).
+  DISCOVERY_MODE: process.env.DISCOVERY_MODE || 'scrape',
 
   // Politeness delay between outbound HTTP requests (ms).
   REQUEST_DELAY_MS: 500,

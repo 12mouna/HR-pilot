@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const config = require('../config');
 const progress = require('../progress');
 const { discoverCompanies } = require('../discovery');
+const { discoverCompaniesViaScraping } = require('../discoverFromCompanySites');
 const { scrapeAllCompanies } = require('../scraper');
 
 // Kicks off the full discovery + scraping pipeline in the background and
@@ -17,8 +19,16 @@ router.post('/scrape', async (req, res) => {
 
   progress.start();
   try {
-    progress.update({ step: 'discovering', message: 'Discovering companies via the Arbeitnow job board API...' });
-    const companies = await discoverCompanies({ forceRefresh });
+    const useScraping = config.DISCOVERY_MODE !== 'arbeitnow';
+    progress.update({
+      step: 'discovering',
+      message: useScraping
+        ? 'Discovering companies by compiling a URL list and scraping career pages...'
+        : 'Discovering companies via the Arbeitnow job board API...',
+    });
+    const companies = useScraping
+      ? await discoverCompaniesViaScraping({ forceRefresh })
+      : await discoverCompanies({ forceRefresh });
 
     progress.update({
       step: 'scraping',

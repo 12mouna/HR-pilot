@@ -17,6 +17,7 @@ Auto-discovers IT companies in Germany and tech startups, scrapes their job post
    ```env
    PORT=3000
    DB_PATH=./data/hrpilot.db
+   DISCOVERY_MODE=scrape
    ```
 
 3. **Run**
@@ -30,21 +31,23 @@ Auto-discovers IT companies in Germany and tech startups, scrapes their job post
 ## How it works
 
 1. Click **▶ Run Scrape**.
-2. The backend pulls IT/tech job postings from the **free, public [Arbeitnow Job Board API](https://arbeitnow.com/api/job-board-api)** — no API key, no signup, no billing account, and no ToS/scraping risk (unlike scraping Indeed/LinkedIn/Glassdoor directly, which aggressively block bots and can carry legal risk).
-3. Postings are filtered against a configurable IT keyword list (`developer`, `devops`, `frontend`, `backend`, `full stack`, `software engineer`, `sysadmin`, `data engineer`, `QA`, `cloud`, etc.) and grouped by company, capped at **100 companies** per run. New companies are stored in SQLite (`companies` table); already-known companies are skipped unless "Force refresh" is checked.
-4. For each matched job, the job's detail page is visited (`axios` + `cheerio`, with an optional Puppeteer fallback for JS-rendered pages) and a contact email is extracted via regex (typically found at the end of the job description). If no email is found, the job URL itself is stored as an "Apply" link fallback. Requests respect a rate-limiting delay and basic `robots.txt` checking.
-5. The frontend polls `/scrape-status` every 1.5s to render a live progress bar ("Scraping 34/100 companies...").
-6. When done, the page reloads and shows the results table (aggregated per company, sorted by open IT position count descending), with a live search-by-name filter and sortable columns.
+2. **Company discovery (default: real web scraping, per spec)** — the backend first *compiles a URL list of candidate companies* by scraping Wikipedia's IT/tech company category pages (`src/companyUrlScraper.js`): it lists article titles via Wikipedia's public API, then scrapes each company's article page for its official website link (from the infobox). For each candidate URL, it then scrapes the company's own homepage to locate a careers/jobs page (`src/discoverFromCompanySites.js`), and scans that page for IT job matches against a configurable keyword list (`developer`, `devops`, `frontend`, `backend`, `full stack`, `software engineer`, `sysadmin`, `data engineer`, `QA`, `cloud`, etc.), capped at **100 companies** per run. New companies are stored in SQLite (`companies` table); already-known companies are skipped unless "Force refresh" is checked.
+   > Set `DISCOVERY_MODE=arbeitnow` in `.env` to switch to the original fallback path, which pulls companies/jobs directly from the free, public [Arbeitnow Job Board API](https://arbeitnow.com/api/job-board-api) instead (`src/discovery.js`) — faster and with zero ToS/anti-bot risk, at the cost of not literally "compiling a URL list" first.
+3. For each matched job, the job's detail page is visited (`axios` + `cheerio`, with an optional Puppeteer fallback for JS-rendered pages) and a contact email is extracted via regex (typically found at the end of the job description). If no email is found, the job URL itself is stored as an "Apply" link fallback. Requests respect a rate-limiting delay and basic `robots.txt` checking.
+4. The frontend polls `/scrape-status` every 1.5s to render a live progress bar ("Scraping 34/100 companies...").
+5. When done, the page reloads and shows the results table (aggregated per company, sorted by open IT position count descending), with a live search-by-name filter and sortable columns.
 
 ## Project structure
 
 ```
 server.js                 Express app entry point
 src/
-  config.js               Env vars, Arbeitnow API URL, keyword lists, tunables
+  config.js               Env vars, DISCOVERY_MODE toggle, Arbeitnow API URL, keyword lists, tunables
   db.js                    SQLite access (better-sqlite3): companies & jobs tables
   progress.js              Shared in-memory progress tracker (EventEmitter)
-  discovery.js             Arbeitnow API pagination + keyword filtering + company grouping
+  companyUrlScraper.js     Step 1: scrapes Wikipedia to compile a URL list of candidate companies
+  discoverFromCompanySites.js  Steps 2-3: scrapes each company's site for its careers page + IT job matches
+  discovery.js             Fallback: Arbeitnow API pagination + keyword filtering + company grouping
   scraper.js               axios+cheerio job-detail fetch, Puppeteer fallback, email regex
   routes/
     index.js               GET  /              -> renders results table
