@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HR-Pilot – IT Job Scraper</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 HR-Pilot</h1>
+      <p>Auto-discover IT companies &amp; tech startups in Germany and scrape their open IT job positions.</p>
+    </header>
+
+    <div class="controls">
+      <button id="runScrapeBtn">▶ Run Scrape</button>
+      <label class="force-refresh">
+        <input type="checkbox" id="forceRefresh" />
+        Force refresh companies
+      </label>
+      <input type="text" id="searchInput" placeholder="Filter by company name..." autocomplete="off" />
+    </div>
+
+    <div id="progressContainer" class="progress-container hidden">
+      <div class="progress-bar-track">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+      <p id="progressMessage">Idle</p>
+    </div>
+
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th data-sort="name">Company Name</th>
+          <th data-sort="count">Open IT Positions</th>
+          <th>Job Title(s)</th>
+          <th>Contact</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <% results.forEach(function(r) { %>
+          <tr data-company="<%= (r.company_name || '').toLowerCase() %>">
+            <td>
+              <a href="<%= r.careers_url %>" target="_blank" rel="noopener"><%= r.company_name %></a>
+            </td>
+            <td><%= r.job_count %></td>
+            <td class="job-titles"><%= r.job_titles %></td>
+            <td>
+              <% if (r.contact_email) { %>
+                <a class="btn-mail" href="mailto:<%= r.contact_email %>">✉ Email</a>
+              <% } else { %>
+                <a class="btn-apply" href="<%= r.fallback_job_url %>" target="_blank" rel="noopener">Apply</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+        <% if (results.length === 0) { %>
+          <tr class="empty-row">
+            <td colspan="4" class="empty-state">No results yet. Click "Run Scrape" to get started.</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
